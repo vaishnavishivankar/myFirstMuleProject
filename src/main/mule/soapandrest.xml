@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="1d7cd4f4-b669-4e42-926d-d558b04ff762" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="8177e860-55c0-4a59-b6bf-d264c6c92b65" >
+		<http:request-connection host="reqres.in" port="80" />
+	</http:request-config>
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="c7d51435-cff2-4990-862a-71424c4ff2ed" >
+		<wsc:connection wsdlLocation="http://www.dneonline.com/calculator.asmx?WSDL" service="Calculator" port="CalculatorSoap" address="http://www.dneonline.com/calculator.asmx" >
+			<wsc:web-service-security actor="http://schemas.xmlsoap.org/soap/actor/next" />
+		</wsc:connection>
+	</wsc:config>
+	<flow name="soapandrestFlow-REST" doc:id="ca28ebe6-1d1b-4e86-8abf-9eae6eede46b" >
+		<http:listener doc:name="Listener" doc:id="77e4a290-e18d-4a0e-aa16-9a7c9fee485c" config-ref="HTTP_Listener_config" path="/users" outputMimeType="application/json" allowedMethods="POST"/>
+		<set-variable value="#[payload.inputNumber]" doc:name="set ID" doc:id="d4d0c259-9199-4796-8a74-8434e2cb4398" variableName="userId"/>
+		<logger level="INFO" doc:name="Logger" doc:id="c144cf68-b225-4fdf-8912-6c0fa554c8be" message="invoking the RESTS API"/>
+		<http:request method="GET" doc:name="Request" doc:id="6fad4dcd-b798-476b-99e8-85899e67c785" config-ref="HTTP_Request_configuration" path="#['/api/users/'++ vars.userId as String]"/>
+	</flow>
+	<flow name="soapandrestFlow" doc:id="93e0530e-2ecb-4668-afef-f382b6f5f1c7" >
+		<http:listener doc:name="Listener" doc:id="ca7db8cd-b5ee-4975-993b-9d3f0ac8286e" config-ref="HTTP_Listener_config" path="/covert"/>
+		<set-variable value="#[payload.inputNumber]" doc:name="Set Variable" doc:id="915ec313-bff0-4727-98fb-5fa82ef8c4ed" variableName="inputNumber"/>
+		<ee:transform doc:name="Transform Message" doc:id="f05eaed3-69a8-4d2a-b9ad-c34a19c23a9a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://tempuri.org/
+---
+{
+	ns0#Add:{
+		ns0#intA: vars.inputNumber,
+		ns0#intB: vars.inputNumber
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume doc:name="Consume" doc:id="ef1de4e5-37cd-45aa-bab8-1a4e6a5299d6" config-ref="Web_Service_Consumer_Config" operation="Divide"/>
+		<logger level="INFO" doc:name="Logger" doc:id="5ba26474-9432-48f8-bb7d-050d3158c551" />
+		<ee:transform doc:name="Transform Message" doc:id="ef50b43a-5800-40e5-b642-d3c3e7ae387b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
